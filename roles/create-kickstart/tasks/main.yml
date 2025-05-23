@@ -1,0 +1,16 @@
+---
+- name: Install prerequisite packages
+  ansible.builtin.package:
+    name:
+      - genisoimage
+      - isomd5sum
+      - pykickstart
+      - rsync
+      - syslinux
+    state: present
+
+- name: Check if commercial ISO exists
+  ansible.builtin.stat:
+
+- name: Download ISO if not present
+...

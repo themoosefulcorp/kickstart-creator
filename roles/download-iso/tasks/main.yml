@@ -1,0 +1,33 @@
+---
+- name: Authenticate to the Red Hat Portal
+  ansible.builtin.uri:
+    url: "{{ download_auth_url }}"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      grant_type: refresh_token
+      client_id: rhsm-api
+      refresh_token: "{{ download_api_token }}"
+    return_content: true
+  register: _return_portal_auth
+  no_log: true
+
+- name: Validate that an access token was actually returned
+  ansible.builtin.assert:
+    that:
+      - _return_portal_auth.json is defined
+      - _return_portal_auth.json is not string
+      - _return_portal_auth.json is iterable
+      - _return_portal_auth.json is sequence
+      - _return_portal_auth.json is mapping
+      - _return_portal_auth.json._access_token is defined
+      - _return_portal_auth.json._access_token is string
+      - _return_portal_auth.json._access_token != ''
+      - _return_portal_auth.json._access_token != 'None'
+    quiet: true
+  no_log: true
+
+- name: Extract access token to a variable
+  ansible.builtin.set_fact:
+    _access_token: "{{ _return_portal_auth.json._access_token }}"
+...
