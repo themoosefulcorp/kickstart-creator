@@ -1,0 +1,5 @@
+---
+download_boot_iso_checksum: "6ced368628750ff3ea8a2fc52a371ba368d3377b8307caafda69070849a9e4e7"
+download_offline_iso_checksum: "9b3c8e31bc2cdd2de9cf96abb3726347f5840ff3b176270647b3e66639af291b"
+download_kvm_iso_checksum: "820853871801754056642ead33834fbe5640421b57e07f2c084684f4d1a7d2fe"
+...
