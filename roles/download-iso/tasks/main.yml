@@ -1,0 +1,132 @@
+---
+- name: Assert that vault variables were correctly included
+  ansible.builtin.assert:
+    that:
+      - download_redhat_api_token is defined
+    fail_msg: "Sensitive variables appear to have been incorrectly loaded from vault"
+
+- name: Gather minimum required facts
+  ansible.builtin.setup:
+    gather_subset:
+      - '!all'
+      - user_dir
+  when: ansible_facts.user_dir is not defined
+
+- name: Authenticate to the Red Hat Portal
+  ansible.builtin.uri:
+    url: "{{ download_redhat_auth_url }}"
+    method: POST
+    body_format: form-urlencoded
+    body:
+      grant_type: refresh_token
+      client_id: rhsm-api
+      refresh_token: "{{ download_redhat_api_token }}"
+    return_content: true
+  register: __redhat_portal_authenticated
+  no_log: true
+
+- name: Validate that an access token was actually returned
+  ansible.builtin.assert:
+    that:
+      - __redhat_portal_authenticated.json is defined
+      - __redhat_portal_authenticated.json is not string
+      - __redhat_portal_authenticated.json is iterable
+      - __redhat_portal_authenticated.json is sequence
+      - __redhat_portal_authenticated.json is mapping
+      - __redhat_portal_authenticated.json.access_token is defined
+      - __redhat_portal_authenticated.json.access_token is string
+      - __redhat_portal_authenticated.json.access_token != ''
+      - __redhat_portal_authenticated.json.access_token != 'None'
+    quiet: true
+  no_log: true
+
+- name: Extract access token as a fact
+  ansible.builtin.set_fact:
+    __redhat_access_token: "{{ __redhat_portal_authenticated.json.access_token }}"
+
+- name: Define URL to download ISOs from
+  block:
+  - name: Set network installation image ISO URL
+    ansible.builtin.set_fact:
+      __iso_download_url: "{{ download_redhat_url_base }}/{{ download_boot_iso_checksum }}/download"
+    when: download_installation_source is match("cdn")
+  - name: Set offline installation image ISO URL
+    ansible.builtin.set_fact:
+      __iso_download_url: "{{ download_redhat_url_base }}/{{ download_offline_iso_checksum }}/download"
+    when: download_installation_source is match("offline")
+  - name: Set virtualization image ISO URL
+    ansible.builtin.set_fact:
+      __iso_download_url: "{{ download_redhat_url_base }}/{{ download_kvm_iso_checksum }}/download"
+    when: download_installation_source is match("kvm")
+
+- name: Get ISO information
+  ansible.builtin.uri:
+    url: "{{ __iso_download_url }}"
+    method: GET
+    follow_redirects: none
+    status_code: 307
+    headers:
+      Accept: '*/*'
+      Authorization: "Bearer {{ __redhat_access_token }}"
+  register: __returned_iso_information
+
+- name: Validate that an ISO filename was actually returned
+  ansible.builtin.assert:
+    that:
+      - __returned_iso_information.json is defined
+      - __returned_iso_information.json is not string
+      - __returned_iso_information.json is iterable
+      - __returned_iso_information.json is sequence
+      - __returned_iso_information.json is mapping
+      - __returned_iso_information.json.body is defined
+      - __returned_iso_information.json.body is not string
+      - __returned_iso_information.json.body is iterable
+      - __returned_iso_information.json.body is sequence
+      - __returned_iso_information.json.body is mapping
+      - __returned_iso_information.json.body.filename is defined
+      - __returned_iso_information.json.body.filename is string
+      - __returned_iso_information.json.body.filename != ''
+      - __returned_iso_information.json.body.filename != 'None'
+    quiet: true
+
+- name: Extract ISO filename as a fact
+  ansible.builtin.set_fact:
+    __downloaded_iso_filename: "{{ __returned_iso_information.json.body.filename }}"
+
+- name: Define ISO download destination
+  ansible.builtin.set_fact:
+    __iso_download_path: "{{ download_path_base }}/{{ __downloaded_iso_filename }}"
+
+- name: Download the installation ISO
+  block:
+  - name: Download the network installation ISO
+    ansible.builtin.get_url:
+      url: "{{ __iso_download_url }}"
+      dest: "{{ __iso_download_path }}"
+      headers:
+        Accept: '*/*'
+        Authorization: "Bearer {{ __redhat_access_token }}"
+      checksum: "sha256:{{ download_boot_iso_checksum }}"
+      timeout: 3600
+    when: download_installation_source is match("cdn")
+  - name: Download the offline installation ISO
+    ansible.builtin.get_url:
+      url: "{{ __iso_download_url }}"
+      dest: "{{ __iso_download_path }}"
+      headers:
+        Accept: '*/*'
+        Authorization: "Bearer {{ __redhat_access_token }}"
+      checksum: "sha256:{{ download_offline_iso_checksum }}"
+      timeout: 3600
+    when: download_installation_source is match("offline")
+  - name: Download the virtualization ISO
+    ansible.builtin.get_url:
+      url: "{{ __iso_download_url }}"
+      dest: "{{ __iso_download_path }}"
+      headers:
+        Accept: '*/*'
+        Authorization: "Bearer {{ __redhat_access_token }}"
+      checksum: "sha256:{{ download_kvm_iso_checksum }}"
+      timeout: 3600
+    when: download_installation_source is match("kvm")
+...

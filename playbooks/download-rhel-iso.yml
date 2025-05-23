@@ -1,0 +1,16 @@
+---
+- hosts: localhost
+  debugger: on_failed
+  gather_facts: false
+  vars:
+    installation_source: "cdn"
+#    download_directory: "/root"
+  vars_files: ../vault.yml
+  tasks:
+    - name: Download ISO from RHEL
+      ansible.builtin.import_role:
+        name: download-iso
+      vars:
+        iso_installation_source: "{{ installation_source }}"
+        iso_download_directory: "{{ download_directory }}"
+...
