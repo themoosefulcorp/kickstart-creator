@@ -1,0 +1,46 @@
+---
+- name: Install prerequisite packages
+  ansible.builtin.package:
+    name: rsync
+    state: present
+
+- name: Create a mountpoint for the ISO
+  ansible.builtin.file:
+    path: "{{ extract_iso_mount_point }}"
+    state: directory
+  register: __result_mount_point_created
+
+- name: Unmount anything already mounted to the mount pount
+  ansible.posix.mount:
+    path: "{{ extract_iso_mount_point }}"
+    state: unmounted
+  when: __result_mount_point_created is not skipped
+
+- name: Mount the downloaded ISO
+  ansible.posix.mount:
+    src: "{{ __iso_download_path }}"
+    path: "{{ extract_iso_mount_point }}"
+    fstype: iso9660
+    opts: ro,loop
+    state: ephemeral
+
+- name: Define the folder name of the new ISO
+  ansible.builtin.set_fact:
+    __extracted_directory: "{{ extract_working_directory_base }}/{{ download_installation_source }}-{{ kickstart_image_enclave | default('kickstart') }}"
+
+- name: Create a base directory for the contents of the extracted ISO
+  ansible.builtin.file:
+    path: "{{ __extracted_directory }}"
+    state: directory
+
+- name: Extract the mounted ISO contents
+  ansible.posix.synchronize:
+    src: "{{ extract_iso_mount_point }}/"
+    dest: "{{ __extracted_directory }}"
+    archive: true
+
+- name: Unmount the downloaded ISO
+  ansible.posix.mount:
+    path: "{{ extract_iso_mount_point }}"
+    state: unmounted
+...

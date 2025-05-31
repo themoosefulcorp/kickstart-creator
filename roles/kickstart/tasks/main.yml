@@ -1,0 +1,17 @@
+---
+- name: Download RHEL 8 ISO from RedHat
+  ansible.builtin.include_tasks:
+    file: download.yml
+
+- name: Extract contents of downloaded ISO
+  ansible.builtin.include_tasks:
+    file: extract.yml
+
+- name: Generate new Kickstart from templates
+  ansible.builtin.include_tasks:
+    file: kickstart.yml
+
+- name: Compile new Kickstart ISO
+  ansible.builtin.include_tasks:
+    file: compile.yml
+...

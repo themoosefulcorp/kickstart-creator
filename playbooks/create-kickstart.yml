@@ -1,0 +1,26 @@
+---
+- hosts: localhost
+  debugger: on_failed
+  gather_facts: false
+  vars_files: ../vault.yml
+  tasks:
+    - name: Download and build and RHEL 8 Kickstart
+      ansible.builtin.import_role:
+        name: kickstart
+      vars:
+        download_installation_medium: "cdn" # one of cdn, offline, kvm
+        download_directory_base: "/root"
+        extract_working_directory_base: "/root/kickstarts"
+        kickstart_installation_method: "unattended" # one of unattended, interactive
+        kickstart_installation_source: "cdn" # one of cdn, offline
+        kickstart_root_password_is_encrypted: false
+        kickstart_users:
+          - username: "local_admin"
+            groups: "wheel"
+            uid: 1000
+          - username: "ansible"
+            groups: "wheel"
+            uid: 999
+        kickstart_timezone: "America/Denver"
+        
+...

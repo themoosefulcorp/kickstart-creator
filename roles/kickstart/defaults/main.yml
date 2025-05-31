@@ -1,0 +1,26 @@
+---
+vault_redhat_api_token: "{{ redhat_api_token }}"
+vault_rhsm_organization_id: "{{ rhsm_organization_id }}"
+vault_rhsm_activation_key: "{{ rhsm_activation_key }}"
+vault_root_password: "{{ root_password }}"
+
+download_installation_medium: "offline"
+download_directory_base: "{{ ansible_facts.user_dir }}"
+
+extract_iso_mount_point: "/mnt/commercial-iso"
+extract_working_directory_base: "{{ download_directory_base }}/kickstarts"
+
+kickstart_installation_method: "interactive"
+kickstart_installation_source: "offline"
+kickstart_volume_label: "rhel-8-10-kickstart"
+
+kickstart_install_gui: false
+kickstart_partition_apache: false
+kickstart_partition_kubernetes: false
+
+kickstart_root_password_is_encrypted: true
+kickstart_timezone: "Etc/UTC"
+
+
+
+...

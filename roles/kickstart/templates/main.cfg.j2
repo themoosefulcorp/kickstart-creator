@@ -1,0 +1,175 @@
+#version=RHEL8
+
+
+{% if kickstart_installation_method == 'interactive' -%}
+    text
+{% elseif kickstart_installation_method == 'unattended' -%}
+    cmdline
+{% endif %}
+
+
+keyboard --xlayouts='us'
+lang en_US.UTF-8
+
+reboot --eject
+eula --agreed
+firstboot --disable
+
+firewall --enabled --ssh
+selinux --enforcing
+
+services --enabled="NetworkManager,sshd,chronyd"
+services --disabled="kdump,debug-shell"
+
+timezone {{ kickstart_timezone }}
+
+
+{% if kickstart_installation_source == 'cdn' -%}
+    rhsm --organization={{ vault_rhsm_organization_id | quote }} --activation-key={{ vault_rhsm_activation_key | quote }}
+    syspurpose --role="Red Hat Enterprise Linux Server" --sla="Self-Support" --usage="Development/Test"
+{% elseif kickstart_installation_source == 'offline' -%}
+    harddrive --partition-/dev/disk/by-label/{{ kickstart_volume_label }} --dir=/
+    repo --name=AppStream --baseurl=file:///run/install/repo/AppStream
+{% endif %}
+
+
+{% if kickstart_install_gui -%}
+    xconfig --startxonboot
+{% endif %}
+
+
+rootpw {% if kickstart_root_password_is_encrypted -%} --iscrypted {% else -%} --plaintext {%- endif %} {{ vault_root_password | quote }}
+
+
+{% if kickstart_users is defined and kickstart_users | length > 0 -%}
+    {% for user in kickstart_users -%}
+        user --groups={{ user.groups }} --name={{ user.username }} --uid={{ user.uid }} --lock
+    {% endfor %}
+{% endif %}
+
+
+%packages --ignoremissing --timeout=120
+
+{% if kickstart_install_gui -%}
+    @^graphical-server-environment
+    @gnome-desktop
+{% else -%}
+    @^server-product-environment
+{% endif %}
+
+@fonts
+@security-tools
+@smart-card
+aide
+ansible-core
+audit
+autofs
+chrony
+cifs-utils
+clevis
+clevis-dracut
+clevis-luks
+clevis-systemd
+clevis-udisks2
+crun
+dialog
+dnf-automatic
+fapolicyd
+fapolicyd-selinux
+firewalld
+gcc
+gtk2
+hwclock
+ipcalc
+java
+krb5-workstation
+libcanberra-gtk2
+libqb
+libxslt
+logwatch
+mailx
+nmap
+nfs-utils
+ntfs-3g
+nss-tools
+ntfsprogs
+opensc
+openssh-server
+openssl
+openssl-pkcs11
+podman
+policycoreutils
+postfix
+pygtk2
+python2
+python3.11
+python3-babel
+python3-cffi
+python3-cryptography
+python3-firewall
+python3-jmespath
+python3-jinja2
+python3-markupsafe
+python3-ply
+python3-pycparser
+python3-pytz
+python3-pyyaml
+rng-tools
+rsyslog
+rsyslog-gnutls
+slirp4netns
+tcpdump
+tmux
+rpm-plugin-fapolicyd
+rsync
+unzip
+usbguard
+usbguard-selinux
+wget
+zip
+-abrt
+-abrt-addon-ccpp
+-abrt-addon-kerneloops
+-abrt-cli
+-abrt-plugin-sosreport
+-b43-fwcutter
+-firstboot
+-gnome-applets
+-gnome-initial-setup
+-gnome-media
+-gonme-user-share
+-gvfs-afc
+-gvfs-gphoto2
+-gvfs-obexftp
+-iprutils
+-libreport-plugin-logger
+-nautilus-sendto
+-python3-abrt-addon
+-rsh-server
+-sendmail
+#-subscription-manager-firstboot
+-tuned
+-telnet-server
+-tftp-server
+-tuned
+-vsftpd
+-ypserv
+%end
+
+{% if kickstart_installation_method == 'interactive' -%}
+    %include /run/install/repo/pre.cfg
+    {% if kickstart_partition_apache -%}
+        %include /run/install/repo/apache_dir_config.sh
+    {% endif -%}
+    {% if kickstart_partition_kubernetes -%}
+        %include /run/install/repo/kubernetes_dir_config.sh
+    {% endif -%}
+    %include /tmp/drive_config.ks
+    %include /tmp/network_config.ks
+{% else -%}
+
+{% endif %}
+
+
+%addon com_redhat_kdump --disable
+%end

@@ -1,0 +1,46 @@
+---
+- name: Assert that vault variables were correctly included
+  ansible.builtin.assert:
+    that:
+      - vault_rhsm_organization_id is defined
+      - vault_rhsm_organization_id | length > 0
+      - vault_rhsm_activation_key is defined
+      - vault_rhsm_activation_key | length > 0
+      - vault_root_password is defined
+      - vault_root_password | length > 0
+    fail_msg: "Sensitive variables appear to have been inccorectly loaded from vault"
+
+- name: Install prerequisite packages
+  ansible.builtin.package:
+    name: pykickstart
+    state: present
+
+- name: Redefine extracted directory as working directory for the sake of simplicity
+  ansible.builtin.set_fact:
+    __working_directory: "{{ __extracted_directory }}"
+
+- name: Set facts for an interactive installation
+  ansible.builtin.set_fact:
+    __boot_menu_timeout: 60
+  when: kickstart_installation_method is match('interactive')
+
+- name: Set facts for an unattended installation
+  ansible.builtin.set_fact:
+    __boot_menu_timeout: 5
+  when: kickstart_installation_method is match('unattended')
+
+- name: Template new version of grub.cfg
+  ansible.builtin.template:
+    src: grub.cfg.j2
+    dest: "{{ __working_directory }}/BOOT/EFI/grub.cfg"
+
+- name: Template new version of isolinux.cfg
+  ansible.builtin.template:
+    src: isolinux.cfg.j2
+    dest: "{{ __working_directory }}/isolinux/isolinux.cfg"
+
+- name: Template new version of main.cfg
+  ansible.builin.template:
+    src: main.cfg.j2
+    dest: "{{ __working_directory }}/main.cfg"
+...

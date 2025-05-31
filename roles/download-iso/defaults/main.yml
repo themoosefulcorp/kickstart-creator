@@ -1,9 +1,0 @@
----
-download_installation_source: "{{ iso_installation_source | default('cdn') }}"
-download_path_base: "{{ iso_download_directory | default(ansible_facts.user_dir) }}"
-
-download_redhat_auth_url: "https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token"
-download_redhat_api_token: "{{ redhat_api_token }}"
-
-download_redhat_url_base: "https://api.access.redhat.com/management/v1/images"
-...
